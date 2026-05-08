@@ -51,12 +51,14 @@
       "enabled": true,
       "path": "tools/llvm/bin/clang-tidy.exe",
       "jobs": 2,
-      "checks": "clang-analyzer-*,bugprone-*,cert-*,cppcoreguidelines-*,modernize-*,performance-*,portability-*,qt-*,readability-*",
-      "extraArgs": [],
+      "checks": "clang-analyzer-*,bugprone-*,cppcoreguidelines-*,modernize-*,performance-*,portability-*,qt-*,readability-*,-modernize-use-trailing-return-type",
+      "extraArgs": [
+        "--extra-arg=/std:c++17"
+      ],
       "headerFilter": ".*"
     },
     "cppcheck": {
-      "enabled": true,
+      "enabled": false,
       "path": "tools/cppcheck/cppcheck.exe",
       "enable": "all",
       "inconclusive": true,
@@ -71,6 +73,18 @@
   "report": {
     "includeSnippets": true,
     "contextLines": 2,
-    "maxIssues": 10000
+    "maxIssues": 10000,
+    "pathFilters": {
+      "includeRoots": [],
+      "excludeRoots": [
+        "C:/Qt/"
+      ]
+    },
+    "ruleDocs": {
+      "paths": [
+        "rules/clang-tidy.json",
+        "rules/cppcheck.json"
+      ]
+    }
   }
 }

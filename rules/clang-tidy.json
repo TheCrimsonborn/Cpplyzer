@@ -1,0 +1,58 @@
+{
+  "analyzer": "clang-tidy",
+  "rules": {
+    "qt-avoid-qstring-allocations": {
+      "title": "Avoid unnecessary QString allocations",
+      "summary": "Prefer patterns that avoid temporary QString allocations in hot paths.",
+      "why": "Repeated implicit conversions and temporary allocations can add overhead; Qt provides APIs to reduce allocations (e.g., QStringView/QLatin1String where appropriate).",
+      "exampleBefore": "QString s = QString(\"prefix:\") + value; // may allocate temporaries",
+      "exampleAfter": "QString s;\ns.reserve(16);\ns += QStringLiteral(\"prefix:\");\ns += value;",
+      "notes": [
+        "Exact advice depends on Qt version and the APIs available (Qt 6 has QStringView and more modern string handling).",
+        "Treat as a performance/style hint; validate with profiling for hot code."
+      ]
+    },
+    "qt-qstring-constref": {
+      "title": "Prefer QString passed by const reference (or view) where appropriate",
+      "summary": "Avoid passing QString by value unless you intentionally want a copy/move.",
+      "why": "Passing by value can cause copies or moves; for read-only parameters prefer const reference or a view type when compatible.",
+      "exampleBefore": "void log(QString message);",
+      "exampleAfter": "void log(const QString& message);",
+      "notes": [
+        "In Qt 6 codebases, consider QStringView for APIs that don't need ownership."
+      ]
+    },
+    "modernize-use-nullptr": {
+      "title": "Use nullptr",
+      "summary": "Replace 0/NULL used as a null pointer with nullptr.",
+      "why": "nullptr is type-safe and avoids overload ambiguities.",
+      "exampleBefore": "QObject* obj = 0; // or NULL",
+      "exampleAfter": "QObject* obj = nullptr;",
+      "notes": [
+        "This is generally safe and widely adopted in C++11+ (including C++17)."
+      ]
+    },
+    "modernize-use-override": {
+      "title": "Use override",
+      "summary": "Mark overriding virtual functions with override.",
+      "why": "Prevents subtle bugs from signature mismatches and improves readability.",
+      "exampleBefore": "struct Base { virtual void f(); };\nstruct D : Base { void f(); };",
+      "exampleAfter": "struct Base { virtual void f(); };\nstruct D : Base { void f() override; };",
+      "notes": [
+        "Also consider using final on classes or methods where appropriate."
+      ]
+    },
+    "modernize-use-trailing-return-type": {
+      "title": "Use trailing return type",
+      "summary": "Prefer a trailing return type for complicated return types or to match modern C++ style.",
+      "why": "It can improve readability by moving the return type after the parameter list, especially when the return type is long, templated, or depends on parameters.",
+      "exampleBefore": "auto make() -> int; // already trailing\n\nint f(const std::vector<int>& v) { return v.size(); }",
+      "exampleAfter": "auto f(const std::vector<int>& v) -> int { return static_cast<int>(v.size()); }",
+      "notes": [
+        "This rule is style-oriented; decide team-wide whether to enforce it.",
+        "If you want automatic changes, clang-tidy may be able to apply fixes depending on the project and compiler setup."
+      ]
+    }
+  }
+}
+

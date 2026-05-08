@@ -95,6 +95,16 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "includeSnippets": True,
         "contextLines": 2,
         "maxIssues": 10000,
+        "pathFilters": {
+            "includeRoots": [],
+            "excludeRoots": [],
+        },
+        "ruleDocs": {
+            "paths": [
+                "rules/clang-tidy.json",
+                "rules/cppcheck.json",
+            ]
+        },
     },
 }
 
@@ -828,6 +838,66 @@ def attach_snippets(
         issue["snippet"] = snippet_for_file(Path(file_name), int(issue.get("line") or 0), context_lines)
 
 
+def _norm_path_prefix(path: Path) -> str:
+    # Case-insensitive, separator-normalized prefix for Windows-friendly comparisons.
+    return os.path.normcase(os.path.normpath(str(path.resolve())))
+
+
+def resolve_filter_roots(
+    raw_paths: Sequence[str],
+    base_dir: Path,
+    config_dir: Optional[Path],
+) -> List[str]:
+    resolved: List[str] = []
+    for raw in raw_paths:
+        if not raw:
+            continue
+        expanded = os.path.expandvars(os.path.expanduser(str(raw)))
+        candidate = Path(expanded)
+        if candidate.is_absolute():
+            resolved.append(_norm_path_prefix(candidate))
+            continue
+        if config_dir and (config_dir / candidate).exists():
+            resolved.append(_norm_path_prefix((config_dir / candidate).resolve()))
+            continue
+        resolved.append(_norm_path_prefix((base_dir / candidate).resolve()))
+    return resolved
+
+
+def filter_issues_by_paths(
+    issues: List[Dict[str, Any]],
+    include_roots: Sequence[str],
+    exclude_roots: Sequence[str],
+) -> List[Dict[str, Any]]:
+    if not include_roots and not exclude_roots:
+        return issues
+
+    include = [root.rstrip("\\/") for root in include_roots if root]
+    exclude = [root.rstrip("\\/") for root in exclude_roots if root]
+
+    filtered: List[Dict[str, Any]] = []
+    for issue in issues:
+        file_name = str(issue.get("file") or "").strip()
+        if not file_name:
+            filtered.append(issue)
+            continue
+
+        try:
+            file_norm = _norm_path_prefix(Path(file_name))
+        except OSError:
+            filtered.append(issue)
+            continue
+
+        if exclude and any(file_norm.startswith(root) for root in exclude):
+            continue
+        if include and not any(file_norm.startswith(root) for root in include):
+            continue
+
+        filtered.append(issue)
+
+    return filtered
+
+
 def issue_sort_key(issue: Dict[str, Any]) -> Tuple[str, str, int, int, str]:
     return (
         issue.get("file") or "",
@@ -868,6 +938,77 @@ def render_snippet(snippet: Sequence[Dict[str, Any]]) -> str:
     return "\n".join(rows)
 
 
+def load_rule_docs(
+    cfg: Dict[str, Any],
+    config_dir: Optional[Path],
+    base_dir: Optional[Path] = None,
+) -> Tuple[Dict[Tuple[str, str], Dict[str, Any]], List[str]]:
+    """
+    Load offline rule documentation from one or more JSON files.
+
+    Expected JSON format:
+      {
+        "analyzer": "clang-tidy",
+        "rules": {
+          "modernize-use-trailing-return-type": {
+            "title": "...",
+            "summary": "...",
+            "why": "...",
+            "exampleBefore": "...",
+            "exampleAfter": "...",
+            "notes": ["..."]
+          }
+        }
+      }
+    """
+    warnings: List[str] = []
+    mapping: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    report_cfg = cfg.get("report", {}) or {}
+    rule_cfg = report_cfg.get("ruleDocs", {}) or {}
+    raw_paths = rule_cfg.get("paths", []) or []
+    if not raw_paths:
+        return mapping, warnings
+
+    root = base_dir or Path.cwd()
+    for raw in raw_paths:
+        doc_path = resolve_optional_path(str(raw), root, config_dir)
+        if not doc_path or not doc_path.exists():
+            continue
+        try:
+            payload = json.loads(read_text_lossy(doc_path))
+        except Exception as exc:
+            warnings.append(f"Failed to load rule docs {doc_path}: {exc}")
+            continue
+        analyzer = str(payload.get("analyzer", "") or "").strip()
+        rules = payload.get("rules", {})
+        if not analyzer or not isinstance(rules, dict):
+            warnings.append(f"Invalid rule docs file (missing analyzer/rules): {doc_path}")
+            continue
+        for rule_id, info in rules.items():
+            if not rule_id:
+                continue
+            if not isinstance(info, dict):
+                continue
+            mapping[(analyzer, str(rule_id))] = info
+    return mapping, warnings
+
+
+def attach_rule_docs(
+    issues: List[Dict[str, Any]],
+    rule_docs: Dict[Tuple[str, str], Dict[str, Any]],
+) -> None:
+    if not rule_docs:
+        return
+    for issue in issues:
+        analyzer = str(issue.get("analyzer") or "").strip()
+        rule = str(issue.get("rule") or "").strip()
+        if not analyzer or not rule:
+            continue
+        info = rule_docs.get((analyzer, rule))
+        if info:
+            issue["ruleInfo"] = info
+
+
 def render_html_report(report: Dict[str, Any]) -> str:
     generated = html.escape(report["metadata"]["generatedAt"])
     project = html.escape(report["metadata"].get("project", ""))
@@ -886,6 +1027,31 @@ def render_html_report(report: Dict[str, Any]) -> str:
         column = html.escape(str(issue.get("column", "")))
         message = html.escape(str(issue.get("message", "")))
         snippet = render_snippet(issue.get("snippet", []))
+        rule_info = issue.get("ruleInfo") or {}
+        rule_title = html.escape(str(rule_info.get("title", ""))) if isinstance(rule_info, dict) else ""
+        rule_summary = html.escape(str(rule_info.get("summary", ""))) if isinstance(rule_info, dict) else ""
+        rule_why = html.escape(str(rule_info.get("why", ""))) if isinstance(rule_info, dict) else ""
+        example_before = str(rule_info.get("exampleBefore", "")) if isinstance(rule_info, dict) else ""
+        example_after = str(rule_info.get("exampleAfter", "")) if isinstance(rule_info, dict) else ""
+        notes = rule_info.get("notes", []) if isinstance(rule_info, dict) else []
+        if not isinstance(notes, list):
+            notes = []
+        notes_html = "".join(f"<li>{html.escape(str(item))}</li>" for item in notes) if notes else ""
+        rule_block = ""
+        if rule_title or rule_summary or rule_why or example_before or example_after or notes_html:
+            rule_block = f"""
+              <details>
+                <summary>Rule info</summary>
+                <div class="panel" style="margin-top:10px;">
+                  {f"<p><strong>{rule_title}</strong></p>" if rule_title else ""}
+                  {f"<p>{rule_summary}</p>" if rule_summary else ""}
+                  {f"<p class='muted'>{rule_why}</p>" if rule_why else ""}
+                  {f"<p><strong>Before</strong></p><pre>{html.escape(example_before)}</pre>" if example_before else ""}
+                  {f"<p><strong>After</strong></p><pre>{html.escape(example_after)}</pre>" if example_after else ""}
+                  {f"<ul>{notes_html}</ul>" if notes_html else ""}
+                </div>
+              </details>
+            """
         issue_rows.append(
             f"""
             <article class="issue">
@@ -900,6 +1066,7 @@ def render_html_report(report: Dict[str, Any]) -> str:
                 <summary>Source snippet</summary>
                 <pre>{snippet}</pre>
               </details>
+              {rule_block}
             </article>
             """
         )
@@ -1434,6 +1601,8 @@ def run_analysis_for_project(
 
     warnings: List[str] = []
     tool_results: List[CommandResult] = []
+    rule_docs, rule_doc_warnings = load_rule_docs(cfg, config_dir, base_dir=project_file.parent)
+    warnings.extend(rule_doc_warnings)
 
     compile_db_override = compile_commands_override or cfg["analysis"].get("compileCommands", "")
     compile_db_path = resolve_optional_path(compile_db_override, Path.cwd(), config_dir)
@@ -1496,6 +1665,27 @@ def run_analysis_for_project(
         issues.extend(found)
         tool_results.extend(results)
         warnings.extend(tool_warnings)
+
+    # Filter out issues that belong to toolchain/SDK headers (e.g. C:\Qt\...),
+    # unless the user explicitly includes those roots in report.pathFilters.
+    filter_cfg = cfg.get("report", {}).get("pathFilters", {}) or {}
+    raw_includes = filter_cfg.get("includeRoots", []) or []
+    raw_excludes = filter_cfg.get("excludeRoots", []) or []
+    base_dir = Path.cwd()
+    include_roots = resolve_filter_roots(raw_includes, base_dir, config_dir)
+    exclude_roots = resolve_filter_roots(raw_excludes, base_dir, config_dir)
+    if not include_roots:
+        include_roots = [_norm_path_prefix(project_file.parent)]
+    before_count = len(issues)
+    issues = filter_issues_by_paths(issues, include_roots, exclude_roots)
+    removed = before_count - len(issues)
+    if removed:
+        warnings.append(
+            f"Filtered {removed} issue(s) outside included roots. "
+            f"includeRoots={len(include_roots)} excludeRoots={len(exclude_roots)}"
+        )
+
+    attach_rule_docs(issues, rule_docs)
 
     max_issues = int(cfg["report"].get("maxIssues", 10000))
     if len(issues) > max_issues:

@@ -1,0 +1,1 @@
+cl.exe /c /nologo /W3 /EHsc /I. /DUNICODE /Foobj\main.obj main.cpp

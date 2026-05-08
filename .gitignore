@@ -1,0 +1,4 @@
+build/
+reports/
+*.pyc
+__pycache__/

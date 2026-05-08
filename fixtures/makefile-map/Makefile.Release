@@ -1,0 +1,2 @@
+release\main.obj: main.cpp \
+        main.h

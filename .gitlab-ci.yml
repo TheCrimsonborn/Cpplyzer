@@ -1,0 +1,17 @@
+stages:
+  - static-analysis
+
+cpplyzer:
+  stage: static-analysis
+  tags:
+    - windows
+  variables:
+    CPPLYZER: 'C:\Tools\Cpplyzer\cpplyzer.py'
+    CPPLYZER_CONFIG: 'C:\Tools\Cpplyzer\cpplyzer.json'
+  script:
+    - python "$env:CPPLYZER" analyze-many "$env:CI_PROJECT_DIR" --config "$env:CPPLYZER_CONFIG" --output "$env:CI_PROJECT_DIR\reports\cpplyzer" --build-dir "$env:CI_PROJECT_DIR\build\cpplyzer-capture"
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - reports/cpplyzer/

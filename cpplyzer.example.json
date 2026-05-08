@@ -1,0 +1,76 @@
+{
+  "toolchain": {
+    "qmake": "C:/Qt/6.6.3/msvc2022_64/bin/qmake.exe",
+    "jom": "C:/Qt/Tools/QtCreator/bin/jom/jom.exe",
+    "vcvars": "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Auxiliary/Build/vcvars64.bat",
+    "windeployqt": "C:/Qt/6.6.3/msvc2022_64/bin/windeployqt.exe"
+  },
+  "build": {
+    "qmakeArgs": [
+      "-spec",
+      "win32-msvc",
+      "CONFIG+=release"
+    ],
+    "jomDryRunArgs": [
+      "-n"
+    ],
+    "fallbackMakefiles": [
+      "Makefile.Release",
+      "Makefile.Debug"
+    ],
+    "environment": {},
+    "skipQmake": false
+  },
+  "discovery": {
+    "ignoreDirs": [
+      ".git",
+      ".svn",
+      ".hg",
+      ".vs",
+      ".vscode",
+      "__pycache__",
+      "build",
+      "out",
+      "reports",
+      "release",
+      "debug",
+      "GeneratedFiles"
+    ],
+    "ignoreProNames": []
+  },
+  "analysis": {
+    "sourceExtensions": [
+      ".c",
+      ".cc",
+      ".cpp",
+      ".cxx"
+    ],
+    "compileCommands": "",
+    "failOnMissingTool": false,
+    "clangTidy": {
+      "enabled": true,
+      "path": "tools/llvm/bin/clang-tidy.exe",
+      "jobs": 2,
+      "checks": "clang-analyzer-*,bugprone-*,cert-*,cppcoreguidelines-*,modernize-*,performance-*,portability-*,qt-*,readability-*",
+      "extraArgs": [],
+      "headerFilter": ".*"
+    },
+    "cppcheck": {
+      "enabled": true,
+      "path": "tools/cppcheck/cppcheck.exe",
+      "enable": "all",
+      "inconclusive": true,
+      "suppressions": [
+        "missingIncludeSystem"
+      ],
+      "extraArgs": [
+        "--inline-suppr"
+      ]
+    }
+  },
+  "report": {
+    "includeSnippets": true,
+    "contextLines": 2,
+    "maxIssues": 10000
+  }
+}

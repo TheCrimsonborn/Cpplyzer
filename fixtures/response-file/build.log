@@ -1,0 +1,1 @@
+cl -c -nologo -I. -Fodebug\ @main.obj.jom

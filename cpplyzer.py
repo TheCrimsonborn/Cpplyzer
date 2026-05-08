@@ -938,6 +938,28 @@ def render_snippet(snippet: Sequence[Dict[str, Any]]) -> str:
     return "\n".join(rows)
 
 
+def format_generated_at_tr_eu(iso_timestamp: str) -> str:
+    """
+    Format ISO timestamps (e.g. 2026-05-08T11:28:00+03:00) into TR/EU style:
+    DD.MM.YYYY HH:MM:SS UTC±HH:MM
+    """
+    raw = (iso_timestamp or "").strip()
+    if not raw:
+        return ""
+    try:
+        parsed = dt.datetime.fromisoformat(raw)
+    except ValueError:
+        return raw
+    local = parsed.astimezone() if parsed.tzinfo else parsed.replace(tzinfo=dt.timezone.utc).astimezone()
+    offset = local.utcoffset() or dt.timedelta()
+    total_minutes = int(offset.total_seconds() // 60)
+    sign = "+" if total_minutes >= 0 else "-"
+    total_minutes = abs(total_minutes)
+    hh = total_minutes // 60
+    mm = total_minutes % 60
+    return f"{local:%d.%m.%Y %H:%M:%S} UTC{sign}{hh:02d}:{mm:02d}"
+
+
 def load_rule_docs(
     cfg: Dict[str, Any],
     config_dir: Optional[Path],
@@ -1010,7 +1032,7 @@ def attach_rule_docs(
 
 
 def render_html_report(report: Dict[str, Any]) -> str:
-    generated = html.escape(report["metadata"]["generatedAt"])
+    generated = html.escape(format_generated_at_tr_eu(str(report["metadata"]["generatedAt"])))
     project = html.escape(report["metadata"].get("project", ""))
     summary = report["summary"]
     issues = report["issues"]
@@ -1737,6 +1759,7 @@ def render_dashboard(dashboard: Dict[str, Any]) -> str:
     summary = dashboard["summary"]
     projects = dashboard["projects"]
     issues = dashboard["issues"]
+    generated_display = html.escape(format_generated_at_tr_eu(str(metadata.get("generatedAt", ""))))
 
     project_rows = []
     for project in projects:
@@ -1953,7 +1976,7 @@ def render_dashboard(dashboard: Dict[str, Any]) -> str:
 <body>
   <main>
     <h1>Cpplyzer Dashboard</h1>
-    <p class="meta">Root: <code>{html.escape(metadata["root"])}</code><br>Generated: {html.escape(metadata["generatedAt"])}</p>
+    <p class="meta">Root: <code>{html.escape(metadata["root"])}</code><br>Generated: {generated_display}</p>
 
     <section class="summary">
       <div class="panel">

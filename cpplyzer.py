@@ -508,17 +508,18 @@ def extract_cl_command(line: str) -> Optional[str]:
     while start < len(line) and line[start] in " &":
         start += 1
     command = line[start:].strip()
-    if "/c" not in command.lower() and " -c " not in command.lower():
+    lowered = command.lower()
+    if "/c" not in lowered and " -c " not in lowered:
         return None
     return command
 
 
-def is_source_file_token(token: str, extensions: Iterable[str]) -> bool:
+def is_source_file_token(token: str, extensions: tuple[str, ...]) -> bool:
     cleaned = token.strip().strip('"')
     lowered = cleaned.lower()
     if lowered.startswith("/") or lowered.startswith("-"):
         return False
-    return any(lowered.endswith(ext.lower()) for ext in extensions)
+    return lowered.endswith(extensions)
 
 
 def resolve_source_path(token: str, command_dir: Path, source_root: Path) -> Path:
@@ -543,6 +544,7 @@ def compile_db_from_build_log(
     entries: List[Dict[str, str]] = []
     warnings: List[str] = []
     seen = set()
+    extension_tuple = tuple(ext.lower() for ext in extensions)
 
     for line in normalize_make_output(log_text):
         cl_command = extract_cl_command(line)
@@ -555,7 +557,7 @@ def compile_db_from_build_log(
             response_archive_dir,
             warnings,
         )
-        sources = [token for token in tokens if is_source_file_token(token, extensions)]
+        sources = [token for token in tokens if is_source_file_token(token, extension_tuple)]
         if not sources and object_source_map:
             sources = mapped_sources_from_response_tokens(raw_tokens, object_source_map)
             if sources:

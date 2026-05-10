@@ -17,7 +17,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
-from xml.etree import ElementTree as ET
+from defusedxml import ElementTree as ET
 
 
 VERSION = "0.1.0"

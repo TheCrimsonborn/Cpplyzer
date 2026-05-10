@@ -408,11 +408,13 @@ def expand_response_files(
     return expanded
 
 
+OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
+
 def object_key_from_token(token: str) -> Optional[str]:
     cleaned = token.strip().strip('"')
     path = response_file_path(cleaned)
     name = path.name if path else cleaned
-    match = re.match(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$", name)
+    match = OBJECT_KEY_RE.match(name)
     if not match:
         return None
     return match.group("object").lower()

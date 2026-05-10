@@ -410,16 +410,35 @@ def expand_response_files(
     return expanded
 
 
-OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
-
 def object_key_from_token(token: str) -> Optional[str]:
+    r"""
+    Extracts the object key from a compilation token.
+    ⚡ Bolt Optimization: Replaced regex `(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$` with
+    native string operations and avoided unconditional `response_file_path` calls
+    to reduce per-token processing overhead.
+    """
     cleaned = token.strip().strip('"')
-    path = response_file_path(cleaned)
-    name = path.name if path else cleaned
-    match = OBJECT_KEY_RE.match(name)
-    if not match:
-        return None
-    return match.group("object").lower()
+    if cleaned.startswith('@') and len(cleaned) > 1:
+        path = response_file_path(cleaned)
+        name = path.name if path else cleaned
+    else:
+        name = cleaned
+
+    lower_name = name.lower()
+
+    start = 0
+    while True:
+        obj_idx = lower_name.find('.obj', start)
+        if obj_idx <= 0:
+            return None
+
+        if '/' in lower_name[start:obj_idx] or '\\' in lower_name[start:obj_idx]:
+            return None
+
+        if len(lower_name) == obj_idx + 4 or lower_name[obj_idx + 4] == '.':
+            return lower_name[:obj_idx + 4]
+
+        start = obj_idx + 4
 
 
 def makefile_logical_lines(text: str) -> List[str]:

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import functools
 import datetime as dt
 import html
 import json
@@ -352,6 +353,7 @@ def split_windows_args(command: str) -> List[str]:
     return args
 
 
+@functools.lru_cache(maxsize=None)
 def response_file_path(token: str) -> Optional[Path]:
     cleaned = token.strip().strip('"')
     if not cleaned.startswith("@") or len(cleaned) <= 1:

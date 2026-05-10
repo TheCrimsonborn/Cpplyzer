@@ -807,10 +807,22 @@ def run_cppcheck(
     return parse_cppcheck_xml(xml_path), results, warnings
 
 
-def snippet_for_file(path: Path, line: int, context_lines: int) -> List[Dict[str, Any]]:
+def snippet_for_file(
+    path: Path,
+    line: int,
+    context_lines: int,
+    file_cache: Optional[Dict[Path, List[str]]] = None,
+) -> List[Dict[str, Any]]:
     if not path.exists() or line <= 0:
         return []
-    lines = read_text_lossy(path).splitlines()
+
+    if file_cache is not None:
+        if path not in file_cache:
+            file_cache[path] = read_text_lossy(path).splitlines()
+        lines = file_cache[path]
+    else:
+        lines = read_text_lossy(path).splitlines()
+
     start = max(1, line - context_lines)
     end = min(len(lines), line + context_lines)
     snippet: List[Dict[str, Any]] = []
@@ -832,12 +844,19 @@ def attach_snippets(
 ) -> None:
     if not include:
         return
+
+    file_cache: Dict[Path, List[str]] = {}
     for issue in issues:
         file_name = issue.get("file") or ""
         if not file_name:
             issue["snippet"] = []
             continue
-        issue["snippet"] = snippet_for_file(Path(file_name), int(issue.get("line") or 0), context_lines)
+        issue["snippet"] = snippet_for_file(
+            Path(file_name),
+            int(issue.get("line") or 0),
+            context_lines,
+            file_cache
+        )
 
 
 def _norm_path_prefix(path: Path) -> str:

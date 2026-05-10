@@ -1021,7 +1021,7 @@ def load_rule_docs(
             continue
         try:
             payload = json.loads(read_text_lossy(doc_path))
-        except Exception as exc:
+        except (json.JSONDecodeError, OSError) as exc:
             warnings.append(f"Failed to load rule docs {doc_path}: {exc}")
             continue
         analyzer = str(payload.get("analyzer", "") or "").strip()

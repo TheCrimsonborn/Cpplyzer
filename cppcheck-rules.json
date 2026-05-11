@@ -1,0 +1,77 @@
+{
+  "analyzer": "cppcheck",
+  "rules": {
+    "nullPointer": {
+      "title": "Possible null pointer dereference",
+      "summary": "A pointer that might be null is being dereferenced.",
+      "why": "Dereferencing a null pointer leads to immediate program crashes (segmentation faults). This usually happens when a pointer is returned from a function that can fail, and the caller forgets to check if it's null before using it.",
+      "exampleBefore": "int* ptr = getResource();\n*ptr = 5; // Dangerous if ptr is null",
+      "exampleAfter": "int* ptr = getResource();\nif (ptr != nullptr) {\n  *ptr = 5;\n}",
+      "notes": [
+        "Always check pointers returned by functions for null before dereferencing.",
+        "Consider using references instead of pointers if null is not a valid state."
+      ]
+    },
+    "memleak": {
+      "title": "Memory leak",
+      "summary": "Dynamically allocated memory is never freed.",
+      "why": "Failing to release dynamically allocated memory causes the program to consume increasing amounts of RAM over time. In long-running applications, this will eventually exhaust system memory and crash.",
+      "exampleBefore": "void process() {\n  char* buffer = new char[1024];\n  // process data\n  // Forgotten delete[] buffer;\n}",
+      "exampleAfter": "void process() {\n  std::unique_ptr<char[]> buffer(new char[1024]);\n  // Memory is automatically freed when buffer goes out of scope\n}",
+      "notes": [
+        "Avoid raw pointers for memory management. Use smart pointers like std::unique_ptr or std::shared_ptr."
+      ]
+    },
+    "uninitvar": {
+      "title": "Uninitialized variable",
+      "summary": "A variable is used before it is assigned a value.",
+      "why": "Reading from an uninitialized variable yields garbage data left over in memory. This results in unpredictable behavior and non-deterministic bugs that are incredibly hard to track down.",
+      "exampleBefore": "int x;\nif (condition) { x = 5; }\nstd::cout << x; // Undefined behavior if condition is false",
+      "exampleAfter": "int x = 0; // Safe default\nif (condition) { x = 5; }\nstd::cout << x;",
+      "notes": [
+        "Always initialize variables at the point of declaration."
+      ]
+    },
+    "outOfBounds": {
+      "title": "Array index out of bounds",
+      "summary": "An attempt to access an array element outside its valid range.",
+      "why": "Accessing memory outside the bounds of an array corrupts adjacent memory or causes a segmentation fault. This is a severe security vulnerability that can be exploited by attackers.",
+      "exampleBefore": "int arr[5];\nfor (int i = 0; i <= 5; ++i) { // Bug: <= 5 instead of < 5\n  arr[i] = 0;\n}",
+      "exampleAfter": "int arr[5];\nfor (int i = 0; i < 5; ++i) {\n  arr[i] = 0;\n}\n// Better: use std::array and range-based for loops",
+      "notes": [
+        "Prefer std::vector or std::array over raw C-style arrays.",
+        "Use range-based for loops to prevent off-by-one errors."
+      ]
+    },
+    "useClosedFile": {
+      "title": "Using a closed file",
+      "summary": "A file handle is being used after it has been closed.",
+      "why": "Once a file handle is closed, the operating system reclaims the resource. Attempting to read from or write to a closed file handle will fail and may corrupt other open files if the handle was reassigned.",
+      "exampleBefore": "FILE* f = fopen(\"data.txt\", \"r\");\nfclose(f);\nchar c = fgetc(f); // Error: f is already closed",
+      "exampleAfter": "FILE* f = fopen(\"data.txt\", \"r\");\nif (f) {\n  char c = fgetc(f);\n  fclose(f);\n}",
+      "notes": [
+        "Prefer C++ file streams (std::ifstream, std::ofstream) as their destructors automatically close the file safely."
+      ]
+    },
+    "resourceLeak": {
+      "title": "Resource leak",
+      "summary": "A system resource (like a file handle or network socket) is acquired but not released.",
+      "why": "Similar to memory leaks, failing to release system resources can lead to exhaustion, preventing the application or even the entire OS from opening new files or connections.",
+      "exampleBefore": "void readData() {\n  FILE* f = fopen(\"data.txt\", \"r\");\n  if (error_condition) return; // f is leaked here\n  fclose(f);\n}",
+      "exampleAfter": "void readData() {\n  std::ifstream f(\"data.txt\");\n  if (error_condition) return; // f is safely closed by destructor\n}",
+      "notes": [
+        "Use RAII (Resource Acquisition Is Initialization) to manage all resources automatically."
+      ]
+    },
+    "syntaxError": {
+      "title": "Syntax Error / Unparsable code",
+      "summary": "Cppcheck could not parse the code due to invalid syntax or complex macros.",
+      "why": "If the code is unparsable, the static analysis tool cannot guarantee the safety or correctness of the file. This often happens with heavily macro-obfuscated code.",
+      "exampleBefore": "MACRO_START int x = 5 MACRO_END",
+      "exampleAfter": "int x = 5;",
+      "notes": [
+        "Ensure your code compiles successfully. If macros are causing the issue, try to simplify them or configure cppcheck to ignore them."
+      ]
+    }
+  }
+}

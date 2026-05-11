@@ -1,0 +1,109 @@
+{
+  "analyzer": "clang-tidy",
+  "rules": {
+    "modernize-use-auto": {
+      "title": "Use 'auto' for variable declarations",
+      "summary": "Improves readability by using 'auto' instead of lengthy or complex type names.",
+      "why": "Long or complex type declarations clutter the code and make refactoring difficult. Using 'auto' forces the compiler to deduce the type, which eliminates visual noise and prevents accidental implicit conversions.",
+      "exampleBefore": "std::vector<int>::const_iterator it = vec.begin();",
+      "exampleAfter": "auto it = vec.begin();",
+      "notes": [
+        "Use 'auto' wherever explicitly specifying the type is unnecessary for readability.",
+        "Particularly useful for iterators, complex template types, and lambdas."
+      ]
+    },
+    "modernize-use-override": {
+      "title": "Use 'override' specifier",
+      "summary": "Ensures that virtual functions actually override a base class function.",
+      "why": "Without the 'override' specifier, a slight mismatch in the function signature (like a missing 'const') will silently create a new virtual function instead of overriding the intended one. The 'override' keyword turns this silent bug into a compile-time error.",
+      "exampleBefore": "class Derived : public Base {\n  void doSomething() const;\n};",
+      "exampleAfter": "class Derived : public Base {\n  void doSomething() const override;\n};",
+      "notes": [
+        "Always use 'override' for virtual functions overriding a base class.",
+        "Do not use 'virtual' and 'override' together; 'override' implies 'virtual'."
+      ]
+    },
+    "performance-unnecessary-value-param": {
+      "title": "Pass by const reference instead of value",
+      "summary": "Prevents unnecessary copies of expensive-to-copy objects when passed to functions.",
+      "why": "Passing objects like std::string or std::vector by value triggers a copy constructor. If the function only needs to read the object, passing by const reference (&) avoids this costly memory allocation and copying.",
+      "exampleBefore": "void printName(std::string name) {\n  std::cout << name;\n}",
+      "exampleAfter": "void printName(const std::string& name) {\n  std::cout << name;\n}",
+      "notes": [
+        "Cheap-to-copy types (like int, float, bool) should still be passed by value.",
+        "If you intend to modify or store the parameter, passing by value and using std::move might be appropriate."
+      ]
+    },
+    "cppcoreguidelines-init-variables": {
+      "title": "Initialize all variables",
+      "summary": "Ensures that every variable is initialized at the time of declaration.",
+      "why": "Uninitialized variables lead to undefined behavior, which can cause unpredictable bugs, memory corruption, and security vulnerabilities. Always initialize variables to a safe default.",
+      "exampleBefore": "int counter;\n// ... later ...\ncounter = 0;",
+      "exampleAfter": "int counter = 0;\n// or\nint counter{};",
+      "notes": [
+        "Prefer brace initialization '{}' as it prevents narrowing conversions."
+      ]
+    },
+    "bugprone-use-after-move": {
+      "title": "Do not use an object after it has been moved",
+      "summary": "Prevents accessing an object whose resources have already been transferred via std::move.",
+      "why": "After an object is moved using std::move(), it is left in a valid but unspecified state. Accessing its value or calling methods on it leads to undefined behavior or crashes.",
+      "exampleBefore": "std::string a = \"Hello\";\nstd::string b = std::move(a);\nstd::cout << a; // Error: 'a' is empty or invalid",
+      "exampleAfter": "std::string a = \"Hello\";\nstd::string b = std::move(a);\n// Do not use 'a' anymore",
+      "notes": [
+        "Only use an object after moving it if you are assigning a completely new value to it."
+      ]
+    },
+    "modernize-use-nullptr": {
+      "title": "Use 'nullptr' instead of 'NULL' or '0'",
+      "summary": "Replaces legacy C-style null pointer constants with the type-safe 'nullptr'.",
+      "why": "The macros 'NULL' and '0' are just integers. This can lead to ambiguity in function overloading (where an integer overload might be called instead of a pointer overload). 'nullptr' has its own dedicated type (std::nullptr_t).",
+      "exampleBefore": "int* ptr = NULL;\nif (ptr == 0) { /* ... */ }",
+      "exampleAfter": "int* ptr = nullptr;\nif (ptr == nullptr) { /* ... */ }",
+      "notes": [
+        "'nullptr' is available since C++11."
+      ]
+    },
+    "performance-for-range-copy": {
+      "title": "Avoid unnecessary copies in range-based for loops",
+      "summary": "Prevents accidental object copies when iterating over a container.",
+      "why": "Using 'for (auto item : container)' copies every element in the container. If the elements are expensive to copy (like strings or complex structs), this significantly degrades performance.",
+      "exampleBefore": "for (auto str : string_list) {\n  std::cout << str;\n}",
+      "exampleAfter": "for (const auto& str : string_list) {\n  std::cout << str;\n}",
+      "notes": [
+        "Use 'const auto&' for read-only access.",
+        "Use 'auto&' if you need to modify the elements in the container."
+      ]
+    },
+    "bugprone-macro-parentheses": {
+      "title": "Wrap macro parameters in parentheses",
+      "summary": "Ensures that macros evaluate expressions correctly by enforcing operator precedence.",
+      "why": "Because macros are simple text replacements, passing an expression (like 'a + b') into a macro can break operator precedence, leading to catastrophic logical errors.",
+      "exampleBefore": "#define MULTIPLY(x, y) x * y\nint result = MULTIPLY(1 + 2, 3); // Evaluates to 1 + 2 * 3 = 7",
+      "exampleAfter": "#define MULTIPLY(x, y) ((x) * (y))\nint result = MULTIPLY(1 + 2, 3); // Evaluates to ((1 + 2) * (3)) = 9",
+      "notes": [
+        "Whenever possible, avoid macros entirely and prefer 'constexpr' functions or inline templates."
+      ]
+    },
+    "cppcoreguidelines-pro-type-vararg": {
+      "title": "Do not use variable arguments (varargs)",
+      "summary": "Avoid C-style variable length argument lists.",
+      "why": "Varargs bypass the C++ type system entirely. Passing the wrong type to a vararg function will not cause a compiler error, but will crash the program at runtime. Modern C++ provides safer alternatives.",
+      "exampleBefore": "void print_values(int count, ...);",
+      "exampleAfter": "template<typename... Args>\nvoid print_values(Args... args);",
+      "notes": [
+        "Prefer std::initializer_list or variadic templates."
+      ]
+    },
+    "readability-identifier-naming": {
+      "title": "Follow standard identifier naming conventions",
+      "summary": "Enforces consistent naming for variables, functions, and classes.",
+      "why": "Inconsistent naming makes the codebase hard to read and maintain. Sticking to a unified convention (e.g., camelCase for variables, PascalCase for classes) improves collaboration.",
+      "exampleBefore": "class my_class {\n  int SomeValue;\n  void do_work();\n};",
+      "exampleAfter": "class MyClass {\n  int someValue;\n  void doWork();\n};",
+      "notes": [
+        "Ensure your clang-tidy configuration specifies the exact naming conventions your team uses."
+      ]
+    }
+  }
+}

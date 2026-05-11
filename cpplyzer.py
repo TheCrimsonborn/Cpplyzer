@@ -1056,6 +1056,64 @@ def attach_rule_docs(
             issue["ruleInfo"] = info
 
 
+def render_issue_tabs(index: int, issue: dict, snippet_html: str, context: str = "report") -> str:
+    file_name = html.escape(str(issue.get("file", "")))
+    line = html.escape(str(issue.get("line", "")))
+    column = html.escape(str(issue.get("column", "")))
+    
+    rule_info = issue.get("ruleInfo") or {}
+    rule_why = html.escape(str(rule_info.get("why", ""))) if isinstance(rule_info, dict) else ""
+    rule_summary = html.escape(str(rule_info.get("summary", ""))) if isinstance(rule_info, dict) else ""
+    example_before = str(rule_info.get("exampleBefore", "")) if isinstance(rule_info, dict) else ""
+    example_after = str(rule_info.get("exampleAfter", "")) if isinstance(rule_info, dict) else ""
+    notes = rule_info.get("notes", []) if isinstance(rule_info, dict) else []
+    if not isinstance(notes, list):
+        notes = []
+    notes_html = "".join(f"<li>{html.escape(str(item))}</li>" for item in notes) if notes else ""
+    
+    has_why = bool(rule_why or rule_summary or example_before)
+    has_how = bool(example_after or notes_html)
+    
+    where_id = f"tab-where-{context}-{index}"
+    why_id = f"tab-why-{context}-{index}"
+    how_id = f"tab-how-{context}-{index}"
+    group_name = f"tabs-{context}-{index}"
+    
+    tabs_html = ['<div class="tabs">']
+    
+    tabs_html.append(f'<input type="radio" id="{where_id}" name="{group_name}" checked>')
+    tabs_html.append(f'<label for="{where_id}">📍 Where is the issue?</label>')
+    tabs_html.append(f'<div class="tab-content">')
+    tabs_html.append(f'<div class="location"><code>{file_name}:{line}:{column}</code></div>')
+    tabs_html.append(f'<pre>{snippet_html}</pre>')
+    tabs_html.append(f'</div>')
+    
+    if has_why:
+        tabs_html.append(f'<input type="radio" id="{why_id}" name="{group_name}">')
+        tabs_html.append(f'<label for="{why_id}">❓ Why is this an issue?</label>')
+        tabs_html.append(f'<div class="tab-content">')
+        if rule_summary:
+            tabs_html.append(f'<p><strong>{rule_summary}</strong></p>')
+        if rule_why:
+            tabs_html.append(f'<p>{rule_why}</p>')
+        if example_before:
+            tabs_html.append(f'<p><strong>Example (Before)</strong></p><pre>{html.escape(example_before)}</pre>')
+        tabs_html.append(f'</div>')
+        
+    if has_how:
+        tabs_html.append(f'<input type="radio" id="{how_id}" name="{group_name}">')
+        tabs_html.append(f'<label for="{how_id}">🛠️ How can I fix it?</label>')
+        tabs_html.append(f'<div class="tab-content">')
+        if notes_html:
+            tabs_html.append(f'<ul>{notes_html}</ul>')
+        if example_after:
+            tabs_html.append(f'<p><strong>Example (After)</strong></p><pre>{html.escape(example_after)}</pre>')
+        tabs_html.append(f'</div>')
+        
+    tabs_html.append('</div>')
+    return "\n".join(tabs_html)
+
+
 def render_html_report(report: Dict[str, Any]) -> str:
     generated = html.escape(format_generated_at_tr_eu(str(report["metadata"]["generatedAt"])))
     project = html.escape(report["metadata"].get("project", ""))
@@ -1074,31 +1132,7 @@ def render_html_report(report: Dict[str, Any]) -> str:
         column = html.escape(str(issue.get("column", "")))
         message = html.escape(str(issue.get("message", "")))
         snippet = render_snippet(issue.get("snippet", []))
-        rule_info = issue.get("ruleInfo") or {}
-        rule_title = html.escape(str(rule_info.get("title", ""))) if isinstance(rule_info, dict) else ""
-        rule_summary = html.escape(str(rule_info.get("summary", ""))) if isinstance(rule_info, dict) else ""
-        rule_why = html.escape(str(rule_info.get("why", ""))) if isinstance(rule_info, dict) else ""
-        example_before = str(rule_info.get("exampleBefore", "")) if isinstance(rule_info, dict) else ""
-        example_after = str(rule_info.get("exampleAfter", "")) if isinstance(rule_info, dict) else ""
-        notes = rule_info.get("notes", []) if isinstance(rule_info, dict) else []
-        if not isinstance(notes, list):
-            notes = []
-        notes_html = "".join(f"<li>{html.escape(str(item))}</li>" for item in notes) if notes else ""
-        rule_block = ""
-        if rule_title or rule_summary or rule_why or example_before or example_after or notes_html:
-            rule_block = f"""
-              <details>
-                <summary>Rule info</summary>
-                <div class="panel" style="margin-top:10px;">
-                  {f"<p><strong>{rule_title}</strong></p>" if rule_title else ""}
-                  {f"<p>{rule_summary}</p>" if rule_summary else ""}
-                  {f"<p class='muted'>{rule_why}</p>" if rule_why else ""}
-                  {f"<p><strong>Before</strong></p><pre>{html.escape(example_before)}</pre>" if example_before else ""}
-                  {f"<p><strong>After</strong></p><pre>{html.escape(example_after)}</pre>" if example_after else ""}
-                  {f"<ul>{notes_html}</ul>" if notes_html else ""}
-                </div>
-              </details>
-            """
+        tabs = render_issue_tabs(index, issue, snippet, context="report")
         issue_rows.append(
             f"""
             <article class="issue">
@@ -1108,12 +1142,7 @@ def render_html_report(report: Dict[str, Any]) -> str:
                 <code>{rule}</code>
               </header>
               <p>{message}</p>
-              <div class="location"><code>{file_name}:{line}:{column}</code></div>
-              <details>
-                <summary>Source snippet</summary>
-                <pre>{snippet}</pre>
-              </details>
-              {rule_block}
+              {tabs}
             </article>
             """
         )
@@ -1272,6 +1301,47 @@ def render_html_report(report: Dict[str, Any]) -> str:
       vertical-align: top;
     }}
     th {{ background: #eef2f6; }}
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .tabs input[type="radio"] { display: none; }
+    .tabs label {
+      padding: 10px 16px;
+      background: #f8f9fa;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--muted);
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      flex-grow: 1;
+      text-align: center;
+      user-select: none;
+      margin: 0;
+    }
+    .tabs label:last-of-type { border-right: none; }
+    .tabs label:hover { background: #eef2f6; color: var(--text); }
+    .tabs .tab-content {
+      display: none;
+      width: 100%;
+      order: 1;
+      padding: 16px;
+      background: var(--panel);
+      border-top: none;
+    }
+    .tabs .tab-content p { margin-top: 0; }
+    .tabs input[type="radio"]:checked + label {
+      background: var(--panel);
+      color: var(--accent);
+      border-bottom-color: transparent;
+    }
+    .tabs input[type="radio"]:checked + label + .tab-content { display: block; }
     .empty {{
       background: var(--panel);
       border: 1px solid var(--line);
@@ -1806,16 +1876,14 @@ def render_dashboard(dashboard: Dict[str, Any]) -> str:
         )
 
     issue_rows = []
-    for issue in issues:
+    for index, issue in enumerate(issues, start=1):
         severity = html.escape(str(issue.get("severity", "unknown")))
         analyzer = html.escape(str(issue.get("analyzer", "unknown")))
         rule = html.escape(str(issue.get("rule", "")))
         project = html.escape(str(issue.get("project", "")))
-        file_name = html.escape(str(issue.get("file", "")))
-        line = html.escape(str(issue.get("line", "")))
-        column = html.escape(str(issue.get("column", "")))
         message = html.escape(str(issue.get("message", "")))
         snippet = render_snippet(issue.get("snippet", []))
+        tabs = render_issue_tabs(index, issue, snippet, context="dashboard")
         issue_rows.append(
             f"""
             <article class="issue">
@@ -1826,11 +1894,7 @@ def render_dashboard(dashboard: Dict[str, Any]) -> str:
                 <code>{rule}</code>
               </header>
               <p>{message}</p>
-              <div class="location"><code>{file_name}:{line}:{column}</code></div>
-              <details>
-                <summary>Source snippet</summary>
-                <pre>{snippet}</pre>
-              </details>
+              {tabs}
             </article>
             """
         )
@@ -1990,6 +2054,47 @@ def render_dashboard(dashboard: Dict[str, Any]) -> str:
       user-select: none;
     }}
     .target {{ background: rgba(255, 196, 0, 0.18); }}
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .tabs input[type="radio"] { display: none; }
+    .tabs label {
+      padding: 10px 16px;
+      background: #f8f9fa;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--muted);
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      flex-grow: 1;
+      text-align: center;
+      user-select: none;
+      margin: 0;
+    }
+    .tabs label:last-of-type { border-right: none; }
+    .tabs label:hover { background: #eef2f6; color: var(--text); }
+    .tabs .tab-content {
+      display: none;
+      width: 100%;
+      order: 1;
+      padding: 16px;
+      background: var(--panel);
+      border-top: none;
+    }
+    .tabs .tab-content p { margin-top: 0; }
+    .tabs input[type="radio"]:checked + label {
+      background: var(--panel);
+      color: var(--accent);
+      border-bottom-color: transparent;
+    }
+    .tabs input[type="radio"]:checked + label + .tab-content { display: block; }
     .empty {{
       background: var(--panel);
       border: 1px solid var(--line);

@@ -326,6 +326,8 @@ def normalize_make_output(text: str) -> List[str]:
             line = buffer + line
             buffer = ""
         lines.append(line.strip())
+    # Flush any remaining buffer, this handles the case where the very last line
+    # of the output was a continuation line (ending with ^)
     if buffer.strip():
         lines.append(buffer.strip())
     return lines

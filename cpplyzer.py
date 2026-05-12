@@ -331,26 +331,10 @@ def normalize_make_output(text: str) -> List[str]:
     return lines
 
 
+SPLIT_ARGS_RE = re.compile(r'(?:[^\s"]|"[^"]*"?)+')
+
 def split_windows_args(command: str) -> List[str]:
-    args: List[str] = []
-    current: List[str] = []
-    in_quotes = False
-    i = 0
-    while i < len(command):
-        char = command[i]
-        if char == '"':
-            in_quotes = not in_quotes
-            current.append(char)
-        elif char.isspace() and not in_quotes:
-            if current:
-                args.append("".join(current).strip('"'))
-                current = []
-        else:
-            current.append(char)
-        i += 1
-    if current:
-        args.append("".join(current).strip('"'))
-    return args
+    return [m.group(0).strip('"') for m in SPLIT_ARGS_RE.finditer(command)]
 
 
 @functools.lru_cache(maxsize=None)
@@ -414,8 +398,10 @@ OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
 
 def object_key_from_token(token: str) -> Optional[str]:
     cleaned = token.strip().strip('"')
-    path = response_file_path(cleaned)
-    name = path.name if path else cleaned
+    if cleaned.startswith("@") and len(cleaned) > 1:
+        name = cleaned[1:].replace("\\", "/").split("/")[-1]
+    else:
+        name = cleaned
     match = OBJECT_KEY_RE.match(name)
     if not match:
         return None

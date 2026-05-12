@@ -1,0 +1,1 @@
+The resolve_source_path function in cpplyzer.py is heavily called and repeatedly checks the filesystem and creates Path objects. Caching its results with @functools.lru_cache yields dramatic performance improvements (e.g. 68 seconds down to 0.2 seconds for 100,000 iterations).

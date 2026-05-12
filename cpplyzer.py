@@ -526,6 +526,7 @@ def is_source_file_token(token: str, extensions: tuple[str, ...]) -> bool:
     return lowered.endswith(extensions)
 
 
+@functools.lru_cache(maxsize=None)
 def resolve_source_path(token: str, command_dir: Path, source_root: Path) -> Path:
     cleaned = token.strip().strip('"')
     candidate = Path(cleaned)

@@ -1,0 +1,3 @@
+## 2024-05-13 - [Fast String Parsing vs Object Creation]
+**Learning:** In performance-critical sections dealing with parsing thousands of compile commands or object paths, creating `pathlib.Path` objects purely for path string manipulation (like getting `.name`) introduces significant, unnecessary overhead compared to basic string splitting operations (`str.replace("\\", "/").split("/")[-1]`). In addition, python character-by-character loops are extremely slow compared to pre-compiled `re.finditer` loops.
+**Action:** Always favor basic string operations and `re` module over loop iteration and `pathlib.Path` for transient strings during intensive log parsing.

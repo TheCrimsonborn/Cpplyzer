@@ -313,6 +313,10 @@ def run_command(
 
 
 def normalize_make_output(text: str) -> List[str]:
+    """Normalizes makefile output, optimized for common case without line continuations."""
+    if "^" not in text:
+        return [line.strip() for line in text.splitlines() if line.rstrip()]
+
     lines: List[str] = []
     buffer = ""
     for raw_line in text.splitlines():
@@ -332,6 +336,10 @@ def normalize_make_output(text: str) -> List[str]:
 
 
 def split_windows_args(command: str) -> List[str]:
+    """Splits a Windows command string into arguments, optimized for strings without quotes."""
+    if '"' not in command:
+        return command.split()
+
     args: List[str] = []
     current: List[str] = []
     in_quotes = False
@@ -505,6 +513,13 @@ CL_RE = re.compile(
 
 
 def extract_cl_command(line: str) -> Optional[str]:
+    """Extracts the cl.exe command from a log line, optimized with fast path checks."""
+    lowered = line.lower()
+    if "/c" not in lowered and " -c " not in lowered:
+        return None
+    if "cl" not in lowered:
+        return None
+
     match = CL_RE.search(line)
     if not match:
         return None
@@ -512,8 +527,8 @@ def extract_cl_command(line: str) -> Optional[str]:
     while start < len(line) and line[start] in " &":
         start += 1
     command = line[start:].strip()
-    lowered = command.lower()
-    if "/c" not in lowered and " -c " not in lowered:
+    command_lowered = command.lower()
+    if "/c" not in command_lowered and " -c " not in command_lowered:
         return None
     return command
 
@@ -527,14 +542,17 @@ def is_source_file_token(token: str, extensions: tuple[str, ...]) -> bool:
 
 
 def resolve_source_path(token: str, command_dir: Path, source_root: Path) -> Path:
+    """Resolves a source file path from a token, optimized for performance."""
     cleaned = token.strip().strip('"')
-    candidate = Path(cleaned)
-    if candidate.is_absolute():
-        return candidate.resolve()
-    build_relative = (command_dir / candidate).resolve()
-    if build_relative.exists():
-        return build_relative
-    return (source_root / candidate).resolve()
+    if os.path.isabs(cleaned):
+        return Path(os.path.realpath(cleaned))
+
+    cmd_dir_str = str(command_dir)
+    build_relative = os.path.realpath(os.path.join(cmd_dir_str, cleaned))
+    if os.path.exists(build_relative):
+        return Path(build_relative)
+
+    return Path(os.path.realpath(os.path.join(str(source_root), cleaned)))
 
 
 def compile_db_from_build_log(

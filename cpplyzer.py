@@ -413,6 +413,10 @@ def expand_response_files(
 OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
 
 def object_key_from_token(token: str) -> Optional[str]:
+    # ⚡ Bolt: Fast-path rejection before invoking caching or regex.
+    if ".obj" not in token.lower():
+        return None
+
     cleaned = token.strip().strip('"')
     path = response_file_path(cleaned)
     name = path.name if path else cleaned
@@ -505,6 +509,11 @@ CL_RE = re.compile(
 
 
 def extract_cl_command(line: str) -> Optional[str]:
+    # ⚡ Bolt: Fast-path string check to avoid regex engine overhead on non-matching lines.
+    # Check original line without allocating a new lowered string.
+    if "cl" not in line and "CL" not in line and "Cl" not in line and "cL" not in line:
+        return None
+
     match = CL_RE.search(line)
     if not match:
         return None

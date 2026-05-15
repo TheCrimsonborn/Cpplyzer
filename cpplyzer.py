@@ -413,9 +413,23 @@ def expand_response_files(
 OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
 
 def object_key_from_token(token: str) -> Optional[str]:
+    if not token:
+        return None
     cleaned = token.strip().strip('"')
-    path = response_file_path(cleaned)
-    name = path.name if path else cleaned
+    if not cleaned:
+        return None
+
+    # Fast path: it must contain .obj somewhere
+    if ".obj" not in cleaned.lower():
+        return None
+
+    if cleaned.startswith("@") and len(cleaned) > 1:
+        # Use rfind to get basename, avoiding Path instantiation
+        idx = max(cleaned.rfind("/"), cleaned.rfind("\\"))
+        name = cleaned[idx+1:] if idx != -1 else cleaned[1:]
+    else:
+        name = cleaned
+
     match = OBJECT_KEY_RE.match(name)
     if not match:
         return None

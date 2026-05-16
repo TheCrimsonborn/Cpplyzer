@@ -1,0 +1,3 @@
+## 2024-05-17 - Fast-path substring optimization in `object_key_from_token`
+**Learning:** In hot paths parsing compile command logs, attempting to manually parse directory components using string slicing (`rfind('/')`) can be slower than the regex doing the same task if the fast path rejects most inputs upfront. The largest performance gain comes simply from a fast `".obj" not in token.lower()` check, allowing the existing (and correct) regex to handle the subset of matching tokens.
+**Action:** When optimizing string matching that uses regex on unvalidated strings, use a broad fast-path substring check first. Avoid rewriting complex path-splitting logic manually if the regex is efficient enough on the filtered set.

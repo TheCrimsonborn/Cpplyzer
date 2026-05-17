@@ -505,6 +505,10 @@ CL_RE = re.compile(
 
 
 def extract_cl_command(line: str) -> Optional[str]:
+    # Fast path check before slow regex execution
+    if "cl" not in line and "CL" not in line and "Cl" not in line and "cL" not in line:
+        return None
+
     match = CL_RE.search(line)
     if not match:
         return None

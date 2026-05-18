@@ -413,9 +413,20 @@ def expand_response_files(
 OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
 
 def object_key_from_token(token: str) -> Optional[str]:
+    # Fast path: avoids regex and path manipulations if '.obj' is not present
+    if ".obj" not in token.lower():
+        return None
+
     cleaned = token.strip().strip('"')
-    path = response_file_path(cleaned)
-    name = path.name if path else cleaned
+
+    # Only invoke response_file_path if it looks like a response file
+    # This avoids lru_cache checks for normal tokens.
+    if cleaned.startswith("@") and len(cleaned) > 1:
+        path = response_file_path(cleaned)
+        name = path.name if path else cleaned
+    else:
+        name = cleaned
+
     match = OBJECT_KEY_RE.match(name)
     if not match:
         return None

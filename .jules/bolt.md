@@ -1,0 +1,4 @@
+## 2024-05-17 - [Optimizing Regex and Path Overheads in Build Log Parsing]
+**Learning:** In tight loops parsing command-line tokens (like object files and response file paths), relying on unconditional `functools.lru_cache` and instantiation of `pathlib.Path` objects can introduce significant overhead, even when the logic just returns `None` or unchanged paths. Additionally, executing compiled regexes (`re.match`) on non-matching tokens is expensive.
+
+**Action:** Before falling back to slow-path operations like `lru_cache` decorators on file path parsing or `re.match`, implement a fast-path substring check (e.g., `if ".obj" not in token.lower():`) to rapidly prune invalid tokens. Also, avoid invoking parsing functions on tokens that don't meet basic criteria (like checking if it starts with `@` before checking for response file paths).

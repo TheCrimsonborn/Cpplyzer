@@ -1,0 +1,3 @@
+## 2025-05-20 - Fast-path Substring Checks for Regex Hot Paths
+**Learning:** For performance-critical parsing functions in this codebase, relying solely on compiled regexes (`re.search`) is significantly slower than doing a preliminary fast-path check. However, using `.lower()` on long lines is slow. Checking all combinations (e.g. `if "cl" not in line and "CL" not in line and "Cl" not in line and "cL" not in line:`) or just `.lower()` depending on the context is significantly faster for lines that don't match.
+**Action:** When optimizing regex-based parsing of unvalidated strings (like log lines or tokens), implement a broad fast-path substring check before the regex match.

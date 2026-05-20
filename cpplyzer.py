@@ -649,6 +649,10 @@ CLANG_DIAG_RE = re.compile(
 def parse_clang_tidy_output(text: str) -> List[Dict[str, Any]]:
     issues: List[Dict[str, Any]] = []
     for line in text.splitlines():
+        # Fast path to avoid running regex on uninteresting lines
+        if ": warning: " not in line and ": error: " not in line:
+            continue
+
         match = CLANG_DIAG_RE.match(line.strip())
         if not match:
             continue
@@ -658,7 +662,7 @@ def parse_clang_tidy_output(text: str) -> List[Dict[str, Any]]:
             {
                 "analyzer": "clang-tidy",
                 "severity": match.group("severity"),
-                "file": str(Path(match.group("file")).resolve()),
+                "file": os.path.realpath(match.group("file")),
                 "line": int(match.group("line")),
                 "column": int(match.group("column")),
                 "rule": match.group("rule") or "clang-tidy",
@@ -748,13 +752,12 @@ def parse_cppcheck_xml(path: Path) -> List[Dict[str, Any]]:
             )
             continue
         for location in locations[:1]:
+            raw_file = location.attrib.get("file")
             issues.append(
                 {
                     "analyzer": "cppcheck",
                     "severity": severity,
-                    "file": str(Path(location.attrib.get("file", "")).resolve())
-                    if location.attrib.get("file")
-                    else "",
+                    "file": os.path.realpath(raw_file) if raw_file else "",
                     "line": int(location.attrib.get("line", "0") or "0"),
                     "column": int(location.attrib.get("column", "0") or "0"),
                     "rule": rule,

@@ -413,9 +413,21 @@ def expand_response_files(
 OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
 
 def object_key_from_token(token: str) -> Optional[str]:
+    # ⚡ Bolt: Fast-path string check. We explicitly check permutations of '.obj'
+    # to avoid function overhead and regex for tokens that clearly won't match.
+    if '.obj' not in token and '.OBJ' not in token and '.Obj' not in token and '.oBj' not in token \
+       and '.obJ' not in token and '.OBj' not in token and '.ObJ' not in token and '.oBJ' not in token:
+        return None
+
     cleaned = token.strip().strip('"')
-    path = response_file_path(cleaned)
-    name = path.name if path else cleaned
+
+    # ⚡ Bolt: Only instantiate path / call response_file_path if needed
+    if cleaned.startswith("@") and len(cleaned) > 1:
+        path = response_file_path(cleaned)
+        name = path.name if path else cleaned
+    else:
+        name = cleaned
+
     match = OBJECT_KEY_RE.match(name)
     if not match:
         return None

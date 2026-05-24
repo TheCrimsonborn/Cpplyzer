@@ -413,9 +413,17 @@ def expand_response_files(
 OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
 
 def object_key_from_token(token: str) -> Optional[str]:
+    if "obj" not in token.lower():
+        return None
+
     cleaned = token.strip().strip('"')
-    path = response_file_path(cleaned)
-    name = path.name if path else cleaned
+
+    if cleaned.startswith("@") and len(cleaned) > 1:
+        path = response_file_path(cleaned)
+        name = path.name if path else cleaned
+    else:
+        name = cleaned
+
     match = OBJECT_KEY_RE.match(name)
     if not match:
         return None
@@ -505,6 +513,8 @@ CL_RE = re.compile(
 
 
 def extract_cl_command(line: str) -> Optional[str]:
+    if "cl" not in line.lower():
+        return None
     match = CL_RE.search(line)
     if not match:
         return None

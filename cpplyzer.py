@@ -332,6 +332,10 @@ def normalize_make_output(text: str) -> List[str]:
 
 
 def split_windows_args(command: str) -> List[str]:
+    # Fast path for commands without quotes
+    if '"' not in command:
+        return command.split()
+
     args: List[str] = []
     current: List[str] = []
     in_quotes = False
@@ -505,6 +509,10 @@ CL_RE = re.compile(
 
 
 def extract_cl_command(line: str) -> Optional[str]:
+    # Fast path: immediately skip lines that obviously don't contain 'cl'
+    if "cl" not in line.lower():
+        return None
+
     match = CL_RE.search(line)
     if not match:
         return None
@@ -520,10 +528,12 @@ def extract_cl_command(line: str) -> Optional[str]:
 
 def is_source_file_token(token: str, extensions: tuple[str, ...]) -> bool:
     cleaned = token.strip().strip('"')
-    lowered = cleaned.lower()
-    if lowered.startswith("/") or lowered.startswith("-"):
+    if not cleaned:
         return False
-    return lowered.endswith(extensions)
+    # Fast path: immediately reject flags
+    if cleaned[0] == "/" or cleaned[0] == "-":
+        return False
+    return cleaned.lower().endswith(extensions)
 
 
 def resolve_source_path(token: str, command_dir: Path, source_root: Path) -> Path:

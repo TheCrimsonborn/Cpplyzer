@@ -1,0 +1,4 @@
+
+## 2024-05-18 - Fast paths for string processing in cpplyzer log parser
+**Learning:** The Python string manipulation and regex operations, while powerful, add substantial overhead in hot loops when parsing logs. Complex logic with regex searches (like `CL_RE.search(line)`), stripping characters (`.strip().strip('"')`), or iterating strings character-by-character (`split_windows_args`) can be significantly accelerated by short-circuiting these operations with cheap string subset checks (like `in`, `.startswith()`, and short `.split()`).
+**Action:** When implementing parsers in Python that process large, unstructured text lines, always add fast-path filters before regular expressions or complex tokenizers to discard non-matching text as early as possible. Ensure these checks exactly mirror the flexibility of the heavier logic.

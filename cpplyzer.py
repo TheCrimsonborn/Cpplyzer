@@ -413,6 +413,9 @@ def expand_response_files(
 OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
 
 def object_key_from_token(token: str) -> Optional[str]:
+    # Fast path: skip processing if token clearly doesn't contain an object file extension
+    if ".obj" not in token.lower():
+        return None
     cleaned = token.strip().strip('"')
     path = response_file_path(cleaned)
     name = path.name if path else cleaned

@@ -332,6 +332,8 @@ def normalize_make_output(text: str) -> List[str]:
 
 
 def split_windows_args(command: str) -> List[str]:
+    if '"' not in command:
+        return command.split()
     args: List[str] = []
     current: List[str] = []
     in_quotes = False
@@ -414,6 +416,8 @@ OBJECT_KEY_RE = re.compile(r"(?i)(?P<object>[^\\/]+?\.obj)(?:\..*)?$")
 
 def object_key_from_token(token: str) -> Optional[str]:
     cleaned = token.strip().strip('"')
+    if not cleaned or ".obj" not in cleaned.lower():
+        return None
     path = response_file_path(cleaned)
     name = path.name if path else cleaned
     match = OBJECT_KEY_RE.match(name)
@@ -505,6 +509,8 @@ CL_RE = re.compile(
 
 
 def extract_cl_command(line: str) -> Optional[str]:
+    if 'cl' not in line.lower():
+        return None
     match = CL_RE.search(line)
     if not match:
         return None

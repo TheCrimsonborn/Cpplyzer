@@ -1,0 +1,3 @@
+## 2024-05-28 - Fast-Path Regex and Parsing Bypasses in Cpplyzer
+**Learning:** In performance-critical parsing functions (like `extract_cl_command`, `object_key_from_token`), performing expensive regex compilation/execution or fallback parsing without an initial fast-path string check heavily throttles performance when analyzing large logs. Same goes for Python's built-in `.split()` versus custom quote-aware argument splitters.
+**Action:** When handling unvalidated string tokens, proactively inject fast-path checks (e.g., `if 'cl' not in line.lower():`, `if '"' not in command:` or `if ".obj" not in cleaned.lower():`) before evaluating complex regular expressions or looping char-by-char to safely drop unrelated input as fast as possible.

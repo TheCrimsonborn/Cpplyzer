@@ -1,0 +1,7 @@
+## 2024-05-24 - Fast-path substring check before regex and Path
+**Learning:** In performance-critical parsing functions (like `object_key_from_token` processing unvalidated strings), instantiating `pathlib.Path` objects and executing compiled regexes is significantly slower than simple fast-path substring checks. A simple substring check (`if '.obj' not in cleaned.lower(): return None`) drastically reduces execution time by avoiding heavy operations when the string clearly won't match.
+**Action:** Always consider adding broad fast-path substring checks before compiling or executing regular expressions or instantiating `Path` objects in hot loops parsing external unvalidated inputs.
+
+## 2024-05-24 - Fast-path fallback to native string methods
+**Learning:** Custom character-by-character parsing loops (like `split_windows_args`) have significant overhead in Python compared to highly optimized native string methods. When complex features like double-quotes aren't present, falling back to `.split()` provides a major speedup.
+**Action:** For custom parsing loops, look for conditions where the string is simple enough to be processed entirely by native Python string methods and use a fast-path fallback.

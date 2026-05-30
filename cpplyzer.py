@@ -332,6 +332,9 @@ def normalize_make_output(text: str) -> List[str]:
 
 
 def split_windows_args(command: str) -> List[str]:
+    # Fast-path for commands without quotes: use native split for drastic performance boost
+    if '"' not in command:
+        return command.split()
     args: List[str] = []
     current: List[str] = []
     in_quotes = False
@@ -505,6 +508,10 @@ CL_RE = re.compile(
 
 
 def extract_cl_command(line: str) -> Optional[str]:
+    # Fast path substring check to avoid regex matching overhead
+    if "cl" not in line.lower():
+        return None
+
     match = CL_RE.search(line)
     if not match:
         return None

@@ -1,0 +1,3 @@
+## 2024-05-18 - [Fast-pathing `split_windows_args`]
+**Learning:** Python's native `.split()` is highly optimized in C and significantly outperforms a manual character-by-character string iteration loop, even when the manual loop is written carefully in pure Python. Since Windows command arguments only group spaces into single arguments when quotes are used (and backslashes aren't escape characters for spaces), `split_windows_args` can safely fallback to `.split()` if there are no double quotes `"` in the string.
+**Action:** When implementing custom parsing loops in Python, always try to identify a simple precondition (e.g., `'"' not in string`) that allows skipping the complex loop entirely in favor of native fast-path string methods.

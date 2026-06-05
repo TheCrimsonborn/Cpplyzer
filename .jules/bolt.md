@@ -1,0 +1,3 @@
+## 2024-05-23 - Fast-path for split_windows_args
+**Learning:** `split_windows_args` uses a character-by-character while loop to parse arguments which is slow. However, most command strings don't contain double quotes (`"`). Using Python's native `str.split()` when `"` is absent is much faster and completely correct for Windows argument splitting (since backslash doesn't escape space). Additionally, a `for char in command` loop is more performant and readable than `while i < len(command)`.
+**Action:** Always check if a fast-path fallback like `str.split()` can be used before falling back to manual string parsing. Replace `while` loops with index tracking with `for char in str` when iterating over characters in Python.

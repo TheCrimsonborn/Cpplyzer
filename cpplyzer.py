@@ -332,12 +332,15 @@ def normalize_make_output(text: str) -> List[str]:
 
 
 def split_windows_args(command: str) -> List[str]:
+    # ⚡ Bolt optimization: fast-path fallback to Python's highly optimized
+    # native .split() when complex tokens like double-quotes ('"') are not present
+    if '"' not in command:
+        return command.split()
+
     args: List[str] = []
     current: List[str] = []
     in_quotes = False
-    i = 0
-    while i < len(command):
-        char = command[i]
+    for char in command:
         if char == '"':
             in_quotes = not in_quotes
             current.append(char)
@@ -347,7 +350,6 @@ def split_windows_args(command: str) -> List[str]:
                 current = []
         else:
             current.append(char)
-        i += 1
     if current:
         args.append("".join(current).strip('"'))
     return args

@@ -1,0 +1,3 @@
+## 2025-05-18 - Fast-path for Windows command parsing
+**Learning:** When parsing Windows command arguments, spaces must be explicitly quoted to be grouped into a single argument; backslashes are not used to escape spaces. Therefore, standard whitespace splitting (e.g., `.split()`) is entirely accurate for parsing arguments that lack quotes.
+**Action:** For custom argument parsing loops (like `split_windows_args`), use a fast-path fallback to Python's highly optimized native `.split()` when complex tokens like double-quotes (`"`) are not present to drastically reduce character-by-character parsing overhead.

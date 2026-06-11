@@ -1,0 +1,3 @@
+## 2024-06-11 - Fast-path fallback for command argument parsing
+**Learning:** For custom argument parsing loops (like `split_windows_args`), character-by-character loops have significant overhead. Since Windows command arguments only group whitespace-separated items if double-quotes (`"`) are used, strings lacking quotes can be split accurately using Python's highly optimized native `.split()`.
+**Action:** When implementing custom string parsing loops, identify edge cases that can bypass the loop entirely using fast native methods like `.split()` or `in` operator checks before falling back to manual iteration.

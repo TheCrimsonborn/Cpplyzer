@@ -1,0 +1,3 @@
+## 2024-05-18 - Fast path for Windows command argument parsing
+**Learning:** Parsing command line arguments character-by-character in Python is exceptionally slow. The standard string `.split()` method in Python is implemented in C and heavily optimized. For Windows command parsing where backslashes do not escape spaces, arguments that don't contain quotes (`"`) can simply be split by whitespace.
+**Action:** When implementing custom parsers for Windows commands (e.g. `split_windows_args`), check `if '"' not in command` and return `command.split()` to drastically reduce overhead for common unquoted tokens.

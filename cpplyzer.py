@@ -332,6 +332,9 @@ def normalize_make_output(text: str) -> List[str]:
 
 
 def split_windows_args(command: str) -> List[str]:
+    # Fast path for strings without quotes using highly-optimized native split
+    if '"' not in command:
+        return command.split()
     args: List[str] = []
     current: List[str] = []
     in_quotes = False

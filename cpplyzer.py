@@ -335,7 +335,7 @@ def split_windows_args(command: str) -> List[str]:
     # Fast path: highly optimized native split for unquoted commands
     # This prevents character-by-character parsing overhead
     if '"' not in command:
-        return command.split()
+        return [arg for arg in command.split(" ") if arg]
 
     args: List[str] = []
     current: List[str] = []

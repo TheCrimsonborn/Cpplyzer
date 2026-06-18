@@ -1,0 +1,3 @@
+## 2024-06-18 - Fast-pathing Windows Command Argument Parsing
+**Learning:** When parsing Windows command arguments without quotes, the original parser logic splits on any whitespace character (using `.isspace()`). Using Python's native `.split()` (with no arguments) accurately preserves this exact whitespace matching logic while being substantially faster than character-by-character processing in a loop.
+**Action:** For custom argument parsing loops (like 'split_windows_args'), use a fast-path fallback to Python's highly optimized native `.split()` when complex tokens like double-quotes ('"') are not present. This drastically reduces character-by-character parsing overhead while maintaining `isspace()` splitting behavior.

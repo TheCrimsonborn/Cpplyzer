@@ -1,0 +1,3 @@
+## 2024-05-19 - Optimize Command Parsing
+**Learning:** For custom argument parsing loops (like 'split_windows_args'), when complex tokens like double-quotes ('"') are not present, Python's highly optimized native `.split()` behaves identically to manual whitespace tracking logic. This is because native `.split()` exactly matches `.isspace()` logic when no arguments are passed.
+**Action:** Use a fast-path fallback (`if '"' not in command: return command.split()`) before manual parsing loops to drastically reduce character-by-character parsing overhead while maintaining behavior. Additionally, changing `while` loops with manual index tracking to `for char in command:` improves parsing performance slightly when quotes are present.

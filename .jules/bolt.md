@@ -1,0 +1,3 @@
+## 2024-05-16 - [Fast path string checks before character-by-character loops]
+**Learning:** Python's native `.split()` is highly optimized in C and perfectly replicates our custom whitespace splitting logic (`isspace()`) when no quotes (`"`) are present in Windows command parsing loops. Character-by-character while loops with manual index tracking are extremely slow in Python compared to native string methods or `for char in string` loops.
+**Action:** When manually parsing command lines character-by-character, check `if '"' not in command:` as a fast path to use native `.split()`. If character iteration is strictly necessary, use `for char in command:` rather than `while i < len(command):`.
